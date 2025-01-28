@@ -1,388 +1,589 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro-Futuristic Spaceship Battle</title>
-    <style>
-        body {
-            margin: 0;
-            background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
-            color: white;
-            font-family: "Roboto", sans-serif;
-            overflow: hidden;
-        }
+  <meta charset="UTF-8">
+  <title>Kate & Nav's Retro-Futuristic Spaceship Battle</title>
+  <style>
+    /* Global resets & fonts */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Courier New', Courier, monospace;
+    }
 
-        canvas {
-            display: block;
-            margin: 0 auto;
-            border: 2px solid #00ff99;
-            border-radius: 10px;
-            background: radial-gradient(circle, #001f33, #000);
-            box-shadow: 0 4px 20px rgba(0, 255, 153, 0.5);
-        }
+    /* Body with a starry background */
+    body {
+      background-color: #000;
+      color: #9effff;
+      overflow: hidden;
+      text-align: center;
 
-        #score {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 24px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
-        }
+      /* Simple repeating star pattern (small 4x4 PNG, one white star pixel) */
+      background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACNeNeAAAAAGElEQVR42mP8z/CXhwAEYGJgZmDgCABUEw9fHoFIAAAAASUVORK5CYII=");
+      background-repeat: repeat;
+      background-size: contain;
+    }
 
-        #timer {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 24px;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
-        }
+    #gameContainer {
+      position: relative;
+      margin: 20px auto;
+      width: 600px;
+      height: 600px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border: 2px solid #3aff3a;
+      overflow: hidden;
+    }
 
-        #game-over, #level-complete, #game-instructions {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            font-size: 36px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(255, 255, 255, 0.4);
-            color: #fff;
-            display: none;
-        }
+    /* Overlays for instructions, interstitial, game over, final screen */
+    #titleScreen,
+    #instructionsScreen,
+    #interstitial,
+    #gameOverScreen,
+    #finalScreen {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 10;
+    }
+    .hidden {
+      display: none !important;
+    }
 
-        #game-over button, #level-complete button, #game-instructions button {
-            background: #00ff99;
-            color: black;
-            border: none;
-            padding: 10px 20px;
-            font-size: 18px;
-            cursor: pointer;
-            border-radius: 5px;
-            margin: 10px;
-            transition: background 0.3s;
-        }
+    /* Common button style */
+    button {
+      background-color: #3aff3a;
+      border: none;
+      padding: 10px 20px;
+      margin: 10px;
+      cursor: pointer;
+      color: #000;
+      font-weight: bold;
+      font-size: 1rem;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #d4ff00;
+    }
 
-        #game-over button:hover, #level-complete button:hover, #game-instructions button:hover {
-            background: #00cc77;
-        }
+    /* HUD displays */
+    #scoreDisplay,
+    #timeDisplay,
+    #levelDisplay {
+      position: absolute;
+      top: 5px;
+      width: 100%;
+      text-align: center;
+      color: #fff;
+      font-size: 1.2rem;
+      text-shadow: 0 0 5px #3aff3a;
+    }
+    #timeDisplay {
+      top: 30px;
+    }
+    #levelDisplay {
+      top: 55px;
+    }
 
-        #persona-selection {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(255, 255, 255, 0.4);
-            color: #fff;
-        }
+    /* Ship styles (color depends on persona) */
+    .ship {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      z-index: 2;
+      border-radius: 5px;
+    }
+    .navShip {
+      background-color: #3498db;
+    }
+    .kateShip {
+      background-color: #e91e63;
+    }
 
-        #persona-selection button {
-            background: #00ff99;
-            color: black;
-            border: none;
-            padding: 10px 20px;
-            font-size: 18px;
-            cursor: pointer;
-            border-radius: 5px;
-            margin: 10px;
-            transition: background 0.3s;
-        }
+    /* Enemy squares (green) */
+    .enemy {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background-color: #27ae60;
+      z-index: 2;
+      border-radius: 3px;
+    }
 
-        #persona-selection button:hover {
-            background: #00cc77;
-        }
+    /* Bullets (white rectangles) */
+    .bullet {
+      position: absolute;
+      width: 4px;
+      height: 10px;
+      background-color: #fff;
+      z-index: 3;
+    }
 
-        .star {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-        }
-    </style>
+    /* Screenshot button (only visible upon Level 5 completion) */
+    #screenshotButton {
+      display: none;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
-    <div id="persona-selection">
-        <p style="font-size: 28px;">Choose Your Persona</p>
-        <button onclick="selectPersona('Kate')">Play as Kate</button>
-        <button onclick="selectPersona('Nav')">Play as Nav</button>
-    </div>
-    <div id="game-instructions">
-        <p style="font-size: 28px;">Welcome to the Game!</p>
-        <p>Use the arrow keys to move and the spacebar to shoot.</p>
-        <p>Destroy enemies to score points. Reach 50 points to advance to the next level.</p>
-        <p>Can you complete all 5 levels?</p>
-        <button onclick="startGame()">Start Game</button>
-    </div>
-    <div id="level-complete">
-        <p style="font-size: 28px;">Level Complete!</p>
-        <p>Get ready for the next round!</p>
-        <button onclick="startNextLevel()">Continue</button>
-    </div>
-    <div id="score" style="display:none;">Score: 0</div>
-    <div id="timer" style="display:none;">Time: 0s</div>
-    <div id="game-over">
-        <p style="font-size: 32px;">Game Over!</p>
-        <p>Your final score: <span id="final-score">0</span></p>
-        <p>Total time: <span id="final-time">0s</span></p>
-        <button onclick="restartGame()">Play Again</button>
-        <button onclick="takeScreenshot()">Take Screenshot</button>
-    </div>
-    <canvas id="gameCanvas" width="800" height="600" style="display:none;"></canvas>
+<div id="gameContainer">
+  <!-- Title / Persona Selection -->
+  <div id="titleScreen">
+    <h1>Kate & Nav's Retro-Futuristic Spaceship Battle</h1>
+    <p>Select your persona:</p>
+    <button onclick="startGame('Kate')">Play as Kate</button>
+    <button onclick="startGame('Nav')">Play as Nav</button>
+  </div>
 
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const scoreDisplay = document.getElementById("score");
-        const timerDisplay = document.getElementById("timer");
-        const gameOverDisplay = document.getElementById("game-over");
-        const levelCompleteDisplay = document.getElementById("level-complete");
-        const gameInstructions = document.getElementById("game-instructions");
-        const finalScoreDisplay = document.getElementById("final-score");
-        const finalTimeDisplay = document.getElementById("final-time");
-        const personaSelection = document.getElementById("persona-selection");
+  <!-- Instructions screen that appears after persona selection (before Level 1) -->
+  <div id="instructionsScreen" class="hidden">
+    <h2 id="instructionsTitle"></h2>
+    <p id="instructionsText">
+      Use Left/Right Arrow keys to move, and Spacebar to shoot.<br>
+      Destroy enough enemies to clear each level.<br>
+      Good luck!
+    </p>
+    <button onclick="beginLevel()">Start Level 1</button>
+  </div>
 
-        let persona = null;
-        let score = 0;
-        let level = 1;
-        let startTime = 0;
-        let timerInterval;
-        const maxLevel = 5;
-        let gameRunning = false;
-        const spaceship = {
-            x: canvas.width / 2,
-            y: canvas.height - 50,
-            width: 40,
-            height: 20,
-            speed: 12
-        };
-        const bullets = [];
-        const enemies = [];
+  <!-- Interstitial screen between levels -->
+  <div id="interstitial" class="hidden">
+    <h2 id="interstitialTitle"></h2>
+    <p id="interstitialText"></p>
+    <button onclick="goToNextLevel()">Next Level</button>
+  </div>
 
-        const stars = Array.from({ length: 100 }, () => ({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 2
-        }));
+  <!-- The actual game elements are displayed below -->
+  <div id="scoreDisplay"></div>
+  <div id="timeDisplay"></div>
+  <div id="levelDisplay"></div>
 
-        function drawStars() {
-            ctx.fillStyle = "white";
-            stars.forEach(star => {
-                ctx.beginPath();
-                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-                ctx.fill();
-                star.y += 0.5;
-                if (star.y > canvas.height) star.y = 0;
-            });
-        }
+  <!-- Game Over Screen -->
+  <div id="gameOverScreen" class="hidden">
+    <h2>Game Over</h2>
+    <p id="finalStats"></p>
+    <button onclick="reloadPage()">Play Again</button>
+  </div>
 
-        function drawSpaceship() {
-            ctx.fillStyle = persona === "Kate" ? "#ff66ff" : "#6699ff";
-            ctx.fillRect(spaceship.x, spaceship.y, spaceship.width, spaceship.height);
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = persona === "Kate" ? "#ff66ff" : "#6699ff";
-        }
+  <!-- Final Screen (if completed Level 5) -->
+  <div id="finalScreen" class="hidden">
+    <h2>YOU DID IT!</h2>
+    <p id="winStats"></p>
+    <button id="screenshotButton" onclick="takeScreenshot()">Take Screenshot</button>
+    <button onclick="reloadPage()">Play Again</button>
+  </div>
+</div>
 
-        function drawBullet(bullet) {
-            ctx.fillStyle = "#00ff99";
-            ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
-        }
+<!-- Include html2canvas from CDN for screenshot functionality -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-        function drawEnemy(enemy) {
-            ctx.fillStyle = "#00ff99";
-            ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-        }
+<script>
+/* --------------------------
+   GLOBAL GAME STATE
+--------------------------- */
+let persona = null;             // "Kate" or "Nav"
+let currentLevel = 1;           // 1 through 5
+let score = 0;
+let gameTime = 0;               // in seconds
+let timerInterval = null;
+let gameInProgress = false;
+let gameLoopInterval = null;
+let enemies = [];
+let bullets = [];
+let enemySpawnRate = 1000;      // default spawn interval (ms)
+let enemySpeed = 2;
+let bulletSpeed = 5;
+let isLevelComplete = false;
+let levelGoal = 50;             // 50 points to go to next level
+let destroyedThisLevel = 0;
+let ship = null;
 
-        function spawnEnemy() {
-            const enemy = {
-                x: Math.random() * (canvas.width - 40),
-                y: -20,
-                width: 40,
-                height: 20,
-                speed: level === 5 && persona === "Kate" ? 8 : 2 + level * 0.5 + Math.random() * 3
-            };
-            enemies.push(enemy);
-        }
+/* HTML ELEMENTS */
+const titleScreen = document.getElementById('titleScreen');
+const instructionsScreen = document.getElementById('instructionsScreen');
+const interstitial = document.getElementById('interstitial');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const finalScreen = document.getElementById('finalScreen');
+const interstitialTitle = document.getElementById('interstitialTitle');
+const interstitialText = document.getElementById('interstitialText');
+const instructionsTitle = document.getElementById('instructionsTitle');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const timeDisplay = document.getElementById('timeDisplay');
+const levelDisplay = document.getElementById('levelDisplay');
+const finalStats = document.getElementById('finalStats');
+const winStats = document.getElementById('winStats');
+const screenshotButton = document.getElementById('screenshotButton');
 
-        function levelUp() {
-            if (score >= 50 * level && level < maxLevel) {
-                level++;
-                scoreDisplay.style.display = "none";
-                timerDisplay.style.display = "none";
-                gameRunning = false;
-                clearInterval(timerInterval);
-                levelCompleteDisplay.style.display = "block";
-            } else if (level === maxLevel && score >= 50 * level) {
-                winGame();
-            }
-        }
+/* --------------------------
+   START / INTERSTITIAL LOGIC
+--------------------------- */
+function startGame(chosenPersona) {
+  persona = chosenPersona;
+  // Hide title, show instructions
+  titleScreen.classList.add('hidden');
+  instructionsScreen.classList.remove('hidden');
+  
+  instructionsTitle.textContent = `Hey ${persona}, prepare yourself!`;
+}
 
-        function winGame() {
-            gameRunning = false;
-            clearInterval(timerInterval);
-            const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-            gameOverDisplay.style.display = "block";
-            gameOverDisplay.querySelector("p").textContent = `Congratulations ${persona}! You Win!`;
-            finalScoreDisplay.textContent = score;
-            finalTimeDisplay.textContent = `${elapsedTime}s`;
-        }
+function beginLevel() {
+  instructionsScreen.classList.add('hidden');
+  // Start the timer
+  resetGameVariablesForLevel();
+  startTimer();
+  createShip();
+  startGameLoop();
+}
 
-        function update() {
-            if (!gameRunning) return;
+function goToNextLevel() {
+  interstitial.classList.add('hidden');
+  currentLevel++;
+  resetGameVariablesForLevel();
+  startGameLoop();
+}
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+/* Called every time we start or re-start a level */
+function resetGameVariablesForLevel() {
+  isLevelComplete = false;
+  destroyedThisLevel = 0;
+  enemies.forEach(enemy => enemy.remove());
+  bullets.forEach(bullet => bullet.remove());
+  enemies = [];
+  bullets = [];
+  setDifficultyForLevel(currentLevel);
+  // Update UI
+  updateUI();
+}
 
-            drawStars();
-            drawSpaceship();
+/* Called after finishing a level to show the interstitial text */
+function showInterstitial() {
+  stopGameLoop();
+  interstitial.classList.remove('hidden');
+  // Funny, sarcastic messages
+  const funnyMsgs = {
+    1: {
+      title: `Congrats, ${persona}!`,
+      text: `You actually survived Level 1. Let's see if that was just dumb luck...`
+    },
+    2: {
+      title: `Nice Work, ${persona}.`,
+      text: `Level 2 was no biggie, right? It's about to get tougher. Hope you warmed up.`
+    },
+    3: {
+      title: `You're on a roll, ${persona}!`,
+      text: `Level 3 done. Maybe you're better than I thought... or maybe not. Buckle up!`
+    },
+    4: {
+      title: `Impressive, ${persona}.`,
+      text: `Level 4 is behind you. Next up... Level 5. It's your funeral if you're Kate.`
+    }
+  };
+  
+  if (funnyMsgs[currentLevel]) {
+    interstitialTitle.textContent = funnyMsgs[currentLevel].title;
+    interstitialText.textContent = funnyMsgs[currentLevel].text;
+  } else {
+    interstitialTitle.textContent = "Keep Going!";
+    interstitialText.textContent = "Moving to the next level!";
+  }
+}
 
-            bullets.forEach((bullet, index) => {
-                bullet.y -= 7;
-                if (bullet.y + bullet.height < 0) {
-                    bullets.splice(index, 1);
-                } else {
-                    drawBullet(bullet);
-                }
-            });
+/* --------------------------
+   LEVEL DIFFICULTY TWEAKS
+--------------------------- */
+function setDifficultyForLevel(lvl) {
+  switch(lvl) {
+    case 1:
+      enemySpawnRate = 1000; // spawn every 1s
+      enemySpeed = 2;
+      levelGoal = 50;
+      break;
+    case 2:
+      enemySpawnRate = 800;
+      enemySpeed = 3;
+      levelGoal = 50;
+      break;
+    case 3:
+      enemySpawnRate = 700;
+      enemySpeed = 3.5;
+      levelGoal = 50;
+      break;
+    case 4:
+      enemySpawnRate = 600; // Increased spawn rate
+      enemySpeed = 4.5;      // Increased speed
+      levelGoal = 50;
+      break;
+    case 5:
+      // If persona is Nav => same as level 4
+      // If persona is Kate => wayyyy harder
+      if (persona === 'Nav') {
+        enemySpawnRate = 600; // Same as level 4
+        enemySpeed = 4.5;      // Same as level 4
+      } else {
+        enemySpawnRate = 400; // Significantly increased spawn rate
+        enemySpeed = 6;        // Significantly increased speed
+      }
+      levelGoal = 50;
+      break;
+    default:
+      enemySpawnRate = 1000;
+      enemySpeed = 2;
+      levelGoal = 50;
+  }
+}
 
-            enemies.forEach((enemy, index) => {
-                enemy.y += enemy.speed;
-                if (
-                    enemy.x < spaceship.x + spaceship.width &&
-                    enemy.x + enemy.width > spaceship.x &&
-                    enemy.y < spaceship.y + spaceship.height &&
-                    enemy.y + enemy.height > spaceship.y
-                ) {
-                    endGame();
-                }
+/* --------------------------
+   TIMER / SCORING
+--------------------------- */
+function startTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (!gameInProgress) return;
+    gameTime++;
+    updateUI();
+  }, 1000);
+}
 
-                if (enemy.y > canvas.height) {
-                    enemies.splice(index, 1);
-                } else {
-                    drawEnemy(enemy);
-                }
-            });
+function updateUI() {
+  scoreDisplay.textContent = `Score: ${score}`;
+  timeDisplay.textContent = `Time: ${gameTime}s`;
+  levelDisplay.textContent = `Level: ${currentLevel}`;
+}
 
-            bullets.forEach((bullet, bIndex) => {
-                enemies.forEach((enemy, eIndex) => {
-                    if (
-                        bullet.x < enemy.x + enemy.width &&
-                        bullet.x + bullet.width > enemy.x &&
-                        bullet.y < enemy.y + enemy.height &&
-                        bullet.y + bullet.height > enemy.y
-                    ) {
-                        bullets.splice(bIndex, 1);
-                        enemies.splice(eIndex, 1);
-                        score += 10;
-                        scoreDisplay.textContent = `Score: ${score} | Level: ${level}`;
-                        levelUp();
-                    }
-                });
-            });
+/* --------------------------
+   GAME LOOP / LOGIC
+--------------------------- */
+function startGameLoop() {
+  gameInProgress = true;
+  spawnEnemies();
+  if (gameLoopInterval) clearInterval(gameLoopInterval);
+  gameLoopInterval = setInterval(updateGame, 20);
+}
 
-            requestAnimationFrame(update);
-        }
+function stopGameLoop() {
+  gameInProgress = false;
+  clearInterval(gameLoopInterval);
+  gameLoopInterval = null;
+}
 
-        function endGame() {
-            gameRunning = false;
-            clearInterval(timerInterval);
-            const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-            gameOverDisplay.style.display = "block";
-            finalScoreDisplay.textContent = score;
-            finalTimeDisplay.textContent = `${elapsedTime}s`;
-        }
+/* Create the player's ship - color depends on persona */
+function createShip() {
+  // Remove old ship if any
+  const oldShip = document.querySelector('.ship');
+  if (oldShip) oldShip.remove();
+  
+  const shipElem = document.createElement('div');
+  shipElem.classList.add('ship');
+  // Add either 'navShip' or 'kateShip' class for color
+  if (persona === 'Nav') {
+    shipElem.classList.add('navShip');
+  } else {
+    shipElem.classList.add('kateShip');
+  }
+  // Position near bottom center
+  shipElem.style.left = '280px';
+  shipElem.style.top = '550px';
+  document.getElementById('gameContainer').appendChild(shipElem);
+  ship = shipElem;
+}
 
-        function restartGame() {
-            score = 0;
-            level = 1;
-            scoreDisplay.textContent = "Score: 0 | Level: 1";
-            enemies.length = 0;
-            bullets.length = 0;
-            spaceship.x = canvas.width / 2;
-            startTime = Date.now();
-            timerDisplay.textContent = "Time: 0s";
-            timerInterval = setInterval(() => {
-                const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-                timerDisplay.textContent = `Time: ${elapsedTime}s`;
-            }, 1000);
-            gameRunning = true;
-            gameOverDisplay.style.display = "none";
-            update();
-        }
+/* Spawn enemies at intervals */
+function spawnEnemies() {
+  // Stop any existing spawners
+  if (window.enemySpawner) {
+    clearInterval(window.enemySpawner);
+  }
+  
+  window.enemySpawner = setInterval(() => {
+    if (!gameInProgress) return;
+    const enemyElem = document.createElement('div');
+    enemyElem.classList.add('enemy');
+    // random X within container width (600 - enemyWidth)
+    enemyElem.style.left = Math.floor(Math.random() * 570) + 'px'; 
+    enemyElem.style.top = '0px';
+    document.getElementById('gameContainer').appendChild(enemyElem);
+    enemies.push(enemyElem);
+  }, enemySpawnRate);
+}
 
-        function startGame() {
-            gameInstructions.style.display = "none";
-            canvas.style.display = "block";
-            scoreDisplay.style.display = "block";
-            timerDisplay.style.display = "block";
-            startTime = Date.now();
-            timerInterval = setInterval(() => {
-                const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-                timerDisplay.textContent = `Time: ${elapsedTime}s`;
-            }, 1000);
-            gameRunning = true;
-            update();
-        }
+/* Main update function (called ~50 times per second) */
+function updateGame() {
+  // Move enemies down
+  enemies.forEach((enemy, index) => {
+    const currentTop = parseFloat(enemy.style.top);
+    enemy.style.top = (currentTop + enemySpeed) + 'px';
+    
+    // Check if enemy collides with ship
+    if (isColliding(enemy, ship)) {
+      gameOver();
+    }
 
-        function startNextLevel() {
-            levelCompleteDisplay.style.display = "none";
-            scoreDisplay.style.display = "block";
-            timerDisplay.style.display = "block";
-            gameRunning = true;
-            startTime = Date.now();
-            timerInterval = setInterval(() => {
-                const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-                timerDisplay.textContent = `Time: ${elapsedTime}s`;
-            }, 1000);
-            update();
-        }
+    // Check if enemy goes out of bounds without colliding
+    if (currentTop > 600) {
+      enemy.remove();
+      enemies.splice(index, 1);
+    }
+  });
+  
+  // Move bullets up
+  bullets.forEach((bullet, bIndex) => {
+    const currentTop = parseFloat(bullet.style.top);
+    bullet.style.top = (currentTop - bulletSpeed) + 'px';
+    // Remove if out of screen
+    if (currentTop < 0) {
+      bullet.remove();
+      bullets.splice(bIndex, 1);
+    }
+  });
+  
+  // Check collisions bullet vs enemy
+  checkCollisions();
+  
+  // Check if level completed
+  if (!isLevelComplete && score >= currentLevel * levelGoal) {
+    isLevelComplete = true;
+    levelComplete();
+  }
+}
 
-        function selectPersona(selectedPersona) {
-            persona = selectedPersona;
-            personaSelection.style.display = "none";
-            gameInstructions.style.display = "block";
-        }
+/* Collision detection between two elements */
+function isColliding(a, b) {
+  const aRect = a.getBoundingClientRect();
+  const bRect = b.getBoundingClientRect();
 
-        function takeScreenshot() {
-            const link = document.createElement('a');
-            link.download = `${persona}_level5_win.png`;
-            canvas.toBlob((blob) => {
-                link.href = URL.createObjectURL(blob);
-                link.click();
-            });
-        }
+  return !(
+    aRect.right < bRect.left || 
+    aRect.left > bRect.right ||
+    aRect.bottom < bRect.top ||
+    aRect.top > bRect.bottom
+  );
+}
 
-        document.addEventListener("keydown", (e) => {
-            if (!gameRunning) return;
+/* Collision detection between bullets and enemies */
+function checkCollisions() {
+  bullets.forEach((bullet, bIndex) => {
+    const bRect = bullet.getBoundingClientRect();
+    enemies.forEach((enemy, eIndex) => {
+      const eRect = enemy.getBoundingClientRect();
+      
+      if (!(bRect.right < eRect.left || 
+            bRect.left > eRect.right ||
+            bRect.bottom < eRect.top ||
+            bRect.top > eRect.bottom)) {
+        // A collision occurred
+        bullet.remove();
+        enemy.remove();
+        bullets.splice(bIndex, 1);
+        enemies.splice(eIndex, 1);
+        score += 10; // Each enemy shot is 10 points
+        destroyedThisLevel++;
+        updateUI();
+      }
+    });
+  });
+}
 
-            if (e.key === "ArrowLeft" && spaceship.x > 0) {
-                spaceship.x -= spaceship.speed;
-            }
+/* When the level is completed */
+function levelComplete() {
+  // Stop spawning, clear enemies & bullets
+  clearInterval(window.enemySpawner);
+  enemies.forEach(enemy => enemy.remove());
+  bullets.forEach(bullet => bullet.remove());
+  enemies = [];
+  bullets = [];
+  
+  if (currentLevel >= 5) {
+    gameWon();
+  } else {
+    // Show interstitial for next level
+    showInterstitial();
+  }
+}
 
-            if (e.key === "ArrowRight" && spaceship.x + spaceship.width < canvas.width) {
-                spaceship.x += spaceship.speed;
-            }
+/* If all 5 levels are completed */
+function gameWon() {
+  stopGameLoop();
+  gameInProgress = false;
+  
+  finalScreen.classList.remove('hidden');
+  winStats.textContent = `Congrats ${persona}! You survived all 5 levels!
+Final Score: ${score}
+Time Taken: ${gameTime}s
+Now take a screenshot to brag to your partner!`;
+    
+  screenshotButton.style.display = 'inline-block';
+}
 
-            if (e.key === " " || e.key === "Spacebar") {
-                bullets.push({
-                    x: spaceship.x + spaceship.width / 2 - 5,
-                    y: spaceship.y,
-                    width: 5,
-                    height: 10
-                });
-            }
-        });
+/* Game Over scenario */
+function gameOver() {
+  stopGameLoop();
+  gameInProgress = false;
+  clearInterval(window.enemySpawner);
+  
+  gameOverScreen.classList.remove('hidden');
+  finalStats.textContent = `Sorry ${persona}, you got blasted!
+Final Score: ${score}
+Time: ${gameTime}s
+Try again if you dare!`;
+}
 
-        setInterval(spawnEnemy, 1000);
-    </script>
+/* Reload page to start fresh */
+function reloadPage() {
+  window.location.reload();
+}
+
+/* --------------------------
+   KEYBOARD CONTROLS
+--------------------------- */
+document.addEventListener('keydown', (e) => {
+  if (!gameInProgress || !ship) return;
+  const left = parseFloat(ship.style.left);
+  
+  if (e.key === 'ArrowLeft') {
+    ship.style.left = Math.max(left - 10, 0) + 'px';
+  } else if (e.key === 'ArrowRight') {
+    ship.style.left = Math.min(left + 10, 560) + 'px';
+  } else if (e.key === ' ' || e.key === 'Spacebar') {
+    shoot();
+  }
+});
+
+function shoot() {
+  // Prevent shooting too rapidly
+  if (bullets.length > 5) return;
+
+  // Create bullet just above the ship
+  const bulletElem = document.createElement('div');
+  bulletElem.classList.add('bullet');
+  const shipLeft = parseFloat(ship.style.left);
+  bulletElem.style.left = (shipLeft + 18) + 'px'; 
+  bulletElem.style.top = '540px';
+  document.getElementById('gameContainer').appendChild(bulletElem);
+  bullets.push(bulletElem);
+}
+
+/* --------------------------
+   SCREENSHOT FUNCTION
+--------------------------- */
+function takeScreenshot() {
+  const container = document.getElementById('gameContainer');
+  html2canvas(container).then((canvas) => {
+    const dataURL = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = dataURL;
+    link.download = `SpaceshipBattle_${persona}_Level5Complete.png`;
+    link.click();
+  });
+}
+</script>
 </body>
 </html>
